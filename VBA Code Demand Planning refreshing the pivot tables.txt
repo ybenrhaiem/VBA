@@ -1,0 +1,27 @@
+Sub ChangePivotTableDataSource4()
+    Dim ws As Worksheet
+    Dim pt As PivotTable
+    Dim pc As PivotCache
+    Dim newRange As Range
+
+    ' Set the worksheet and PivotTable variables
+    Set ws = Worksheets("MAIN") ' Change to your sheet name
+    Set pt = Sheet5.PivotTables(1) ' Change to your PivotTable name
+
+    ' Set the new data range
+     ' Get the last row and column
+    Dim lastrow As Long, lastColumn As Variant
+    lastrow = _
+     Sheet2.Cells.Find("*", searchorder:=xlByRows, searchdirection:=xlPrevious).Row
+ 
+
+    Set newRange = Sheet2.Range("B16", "V" & lastrow)
+    
+
+    ' Set the PivotCache to the new data range
+    Set pc = ActiveWorkbook.PivotCaches.Create(SourceType:=xlDatabase, SourceData:=newRange)
+
+    ' Update the PivotTable with the new PivotCache
+   pt.ChangePivotCache pc
+   pt.RefreshTable
+End Sub
