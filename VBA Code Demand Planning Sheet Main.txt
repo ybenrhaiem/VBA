@@ -1,0 +1,540 @@
+'Sheet Main Prog'
+
+Public baseValues As New Collection ' Collection to store base values
+Public BaseValuesBackup As New Collection ' Collection to store base values
+Dim n As Integer
+Dim C As Variant
+Dim refresh As Boolean
+
+Public Sub setit()
+    n = 0
+End Sub
+Public Sub counter()
+n = n + 1
+End Sub
+Public Sub notrefreshed()
+refresh = False
+End Sub
+Public Sub refreshed()
+refresh = True
+End Sub
+
+
+
+
+Public Sub Worksheet_Calculate()
+
+    ''''''''''''''''''''''
+Application.EnableEvents = False
+    If Range("F10").Value <> Range("C14").Value Then
+     If Range("C14").Value <> 0 Then
+     Range("F10").Value = Range("C14").Value
+     
+     End If
+     End If
+Application.EnableEvents = True
+     ''''''''''''''''''''''''''''''''''''''''''''''''''
+
+'''''''''''''''''''''''''''''''''''
+     
+End Sub
+
+Private Sub Worksheet_Change(ByVal Target As Range)
+
+On Error Resume Next
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+''''''''''''''main'''''''''''''''''''''''''''''''''''''''''''''''''''''
+     If n < 1 Then
+        Valuesrestoring
+    End If
+    'start there main'
+    
+    Dim rng As Range
+    Dim cell As Range
+    Dim newValue As Double
+    Dim lastrow As Long
+    lastrow = Sheet2.Cells.Find("*", searchorder:=xlByRows, searchdirection:=xlPrevious).Row
+
+    ' Define the range you want to monitor for changes (entire rows from G to R)
+    Set rng = Intersect(Target, Range("G17", "R" & lastrow))
+    ' Check if the changed cells are within the monitored range
+    
+    If Not rng Is Nothing Then
+    
+        ' Disable events to avoid infinite loop
+        Application.EnableEvents = False
+        ' Loop through each changed cell in the range
+        For Each cell In rng
+        
+            ' Check if the corresponding cell in column A has a dark color
+            'If cell.EntireRow.Columns("A").Interior.Color = RGB(0, 0, 0) Then
+                ' Check if the cell value is not empty
+                If Not IsEmpty(cell.Value) Then
+                    ' Check if the value changed is different from the base value
+                     If IsNumeric(cell.Value) Then
+                ' Round up the value and set the decimal part after the comma to 0
+                newValue = Application.WorksheetFunction.RoundUp(cell.Value, 0)
+                cell.Value = newValue
+                End If
+                    If IsBaseValue(cell) Then
+                        ' Store the new base value
+                        'StoreBaseValue cell
+                        If cell.EntireRow.Columns("A").Interior.color = RGB(0, 0, 0) Then
+                        cell.Interior.color = RGB(255, 255, 153)
+                        
+                        End If
+                    End If
+                    If cell.EntireRow.Columns("A").Interior.color = RGB(0, 0, 0) Then
+                    
+                    If Not IsBaseValue(cell) Then
+                        ' Apply the desired color (e.g., blue)
+                        
+                        cell.Interior.color = RGB(189, 215, 238)
+                        cell.Interior.TintAndShade = 0.399975585192419
+                    End If
+                Else
+                    ' Clear the cell color if the value is empty
+                    'cell.Interior.Color = RGB(255, 255, 153) '
+                    'RestoreBaseValue cell '
+                End If
+            End If
+            'End If
+             If Not IsNumeric(cell.Value) Then
+                MsgBox "Veuillez vérifier la valeur entrée", vbCritical
+                cell.Value = baseValues(CStr(cell.Address))
+                If cell.EntireRow.Columns("A").Interior.color = RGB(0, 0, 0) Then
+                        cell.Interior.color = RGB(255, 255, 153)
+                End If
+                
+
+    End If
+        Next cell
+
+        ' Enable events again
+        Application.EnableEvents = True
+    End If
+    AutoFitColumnsInRange
+    On Error GoTo 0
+    ''''''''''''''''''''''''''''''''''''''''
+ If refresh = False Then
+ On Error Resume Next
+ pivot
+ refresh = True
+ End If
+ '''''''''''''''''''''''''''
+End Sub
+
+Sub StoreBaseValue(cell As Range)
+    ' Store the base value for a specific cell
+    On Error Resume Next ' Ignore error 424 ("Object Required")
+    baseValues.Add cell.Value, CStr(cell.Address)
+    'baseValues.Add CStr(cell.Address), cell.Value
+    BaseValuesBackup.Add cell.Value & "|" & CStr(cell.Address), CStr(cell.Address)
+    On Error GoTo 0 ' Reset error handling
+End Sub
+
+Function IsBaseValue(cell As Range) As Boolean
+    ' Check if the current cell value is equal to the base value
+    Dim baseValue As Variant
+    'On Error Resume Next ' Ignore error 424 ("Object Required")
+    baseValue = baseValues(CStr(cell.Address))
+    'On Error GoTo 0 ' Reset error handling
+    If IsNumeric(cell.Value) Then
+    If baseValue = cell.Value Then
+        IsBaseValue = True
+      
+    Else
+        IsBaseValue = False
+    End If
+    
+    
+    End If
+   
+    
+End Function
+
+
+Sub ResetCellColors()
+    Dim rng As Range
+    Dim cell As Range
+    ' Define the range you want to reset the colors for
+    Set rng = Range("G136:R159")
+    ' Loop through each cell in the range and reset the color
+    For Each cell In rng
+    If cell.EntireRow.Columns("A").Interior.color = RGB(0, 0, 0) Then
+        cell.Interior.color = RGB(255, 255, 153)
+        ' Clear the base value for each cell
+        On Error Resume Next ' Ignore error 424 ("Object Required")
+        baseValues.Remove CStr(cell.Address)
+        On Error GoTo 0 ' Reset error handling
+        End If
+    Next cell
+End Sub
+'''''''''''''''Macro apply changes''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub ApplyChanges()
+
+    Dim selectedCells As Range
+    Dim cell As Range
+    ' Check if any cells are selected
+    If Selection.Cells.Count > 0 Then
+        ' Disable events to avoid infinite loop
+        Application.EnableEvents = False
+
+        ' Loop through each selected cell
+        For Each cell In Selection
+   
+      If cell.EntireRow.Columns("A").Interior.color = RGB(0, 0, 0) Then
+        ' Store the current value as the new base value
+        cell.Interior.color = RGB(255, 255, 153)
+        End If
+        
+        ' Clear the base value for each cell
+        On Error Resume Next ' Ignore error 424 ("Object Required")
+        baseValues.Remove CStr(cell.Address)
+        BaseValuesBackup.Remove CStr(cell.Address)
+        On Error GoTo 0 ' Reset error handling
+        StoreBaseValue cell
+    Next cell
+    ' Enable events again
+        Application.EnableEvents = True
+    End If
+    CopyBaseValuesToAnotherSheet
+End Sub
+Sub RestoreBaseValue(cell As Range)
+    ' Restore the base value for a specific cell
+    cell.Value = baseValues(CStr(cell.Address))
+    'MsgBox (baseValues(CStr(cell.Address)))
+    
+End Sub
+'''''''''''''''''''''''''''restore'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub RestoreBaseValueForSelectedCells()
+    Dim selectedCells As Range
+    Dim cell As Range
+
+    ' Check if any cells are selected
+    If Selection.Cells.Count > 0 Then
+        ' Disable events to avoid infinite loop
+        Application.EnableEvents = False
+        refresh = True
+        ' Loop through each selected cell
+        For Each cell In Selection
+        If cell.Column >= 7 And cell.Column <= 18 Then
+
+            ' Restore the base value
+              '''''''''''''''''''''''''''''''''''''''''
+    
+              ''''''''''''''''''''''''''''''''''''''
+              On Error Resume Next
+            RestoreBaseValue cell
+            On Error GoTo 0
+           
+            If cell.EntireRow.Columns("A").Interior.color = RGB(0, 0, 0) Then
+            cell.Interior.color = RGB(255, 255, 153)
+            End If
+            End If
+        Next cell
+        On Error Resume Next
+        pivot
+        ' Enable events again
+        Application.EnableEvents = True
+    End If
+    refresh = False
+    AutoFitColumnsInRange
+  ''''''''''''''''''''''''''''''
+End Sub
+Sub AddOrSubtractPercentage()
+    Dim selectedRange As Range
+    Dim percentage As Double
+    Dim sign As String
+    Dim cell As Range
+    
+    ' Get the selected range
+    On Error Resume Next
+    Set selectedRange = Application.InputBox("Select the range:", Type:=8)
+    On Error GoTo 0
+    
+    ' Check if a range is selected
+    If selectedRange Is Nothing Then
+        MsgBox "No range selected. Exiting macro."
+        Exit Sub
+    End If
+    
+    ' Get percentage and sign from the user
+    percentage = InputBox("Enter the percentage:")
+    sign = UCase(InputBox("Enter '+' to add or '-' to subtract:"))
+    
+    ' Check for valid sign
+    If sign <> "+" And sign <> "-" Then
+        MsgBox "Invalid sign. Please enter '+' or '-'. Exiting macro."
+        Exit Sub
+    End If
+    
+    ' Loop through each cell in the selected range
+    For Each cell In selectedRange
+        ' Check if the cell contains a number
+        If IsNumeric(cell.Value) Then
+            ' Perform addition or subtraction based on the sign
+            If sign = "+" Then
+                cell.Value = cell.Value + (cell.Value * percentage / 100)
+            ElseIf sign = "-" Then
+                cell.Value = cell.Value - (cell.Value * percentage / 100)
+            End If
+        End If
+    Next cell
+  ''''''''''''''''''''''
+
+End Sub
+Sub RoundSelectedRange()
+    Dim selectedRange As Range
+    Dim decimalPlaces As Integer
+    Dim cell As Range
+    
+    ' Get the selected range
+    On Error Resume Next
+    Set selectedRange = Application.InputBox("Select the range:", Type:=8)
+    On Error GoTo 0
+    
+    ' Check if a range is selected
+    If selectedRange Is Nothing Then
+        MsgBox "No range selected. Exiting macro."
+        Exit Sub
+    End If
+    
+    ' Get the number of decimal places from the user
+    decimalPlaces = InputBox("Enter the number of decimal places to round to:")
+    
+    ' Check for valid decimal places
+    If decimalPlaces < 0 Then
+        MsgBox "Invalid number of decimal places. Exiting macro."
+        Exit Sub
+    End If
+    
+    ' Loop through each cell in the selected range
+    For Each cell In selectedRange
+        ' Check if the cell contains a number
+        If IsNumeric(cell.Value) Then
+            ' Round the cell value to the specified number of decimal places
+            cell.Value = Round(cell.Value, decimalPlaces)
+        End If
+    Next cell
+End Sub
+
+
+
+
+Private Sub Worksheet_SelectionChange(ByVal Target As Range)
+
+ '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+    Dim rng As Range
+    Dim cell As Range
+    If n < 1 Then
+    Valuesrestoring
+    End If
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+End Sub
+'''''''''''''''''''''apply pourcentage''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub ApplyPercentage()
+    Dim selectedRange As Range
+    Dim percentage As Double
+    Dim cell As Range
+    refresh = True
+    ' Check if a range is selected
+    On Error Resume Next
+    Set selectedRange = Selection
+    On Error GoTo 0
+    
+    If selectedRange Is Nothing Then
+        MsgBox "Please select a range before clicking the button.", vbExclamation
+        Exit Sub
+    End If
+    
+    ' Input percentage
+    On Error Resume Next
+    percentage = InputBox("Enter the percentage:")
+    On Error GoTo 0
+    
+    ' Check if the input is a valid number
+    If Not IsNumeric(percentage) Then
+        MsgBox "Please enter a valid number for the percentage.", vbExclamation
+        Exit Sub
+    End If
+    
+    ' Apply percentage to each cell in the selected range
+    
+    For Each cell In selectedRange
+        If percentage > 0 Then
+            ' Add percentage if positive
+            cell.Value = cell.Value * (1 + percentage / 100)
+        ElseIf percentage < 0 Then
+            ' Subtract percentage if negative
+            cell.Value = cell.Value * (1 + percentage / 100)
+        End If
+    Next cell
+   ''''''''''''''''''''''''''''''''''''''
+   On Error Resume Next
+   pivot
+   refresh = False
+   AutoFitColumnsInRange
+End Sub
+
+
+Sub AutoFitColumnsInRange()
+    Dim ws As Worksheet
+    Dim startColumn As String
+    Dim endColumn As String
+    Dim targetRange As Range
+
+    ' Set the worksheet variable
+    Set ws = ThisWorkbook.Sheets("MAIN")  ' Change "Sheet1" to the name of your sheet
+
+    ' Define the start and end columns
+    startColumn = "G"
+    endColumn = "T"
+
+    ' Set the target range
+    Set targetRange = Sheet2.Range(startColumn & "17:" & endColumn & "17") ' Assuming you want to autofit based on the first row
+
+    ' Autofit columns in the target range
+    targetRange.EntireColumn.AutoFit
+End Sub
+
+Sub CopyBaseValuesToAnotherSheet()
+    Dim wsDestination As Worksheet
+    Dim valueAddressPair As Variant
+    Dim i As Integer
+    Sheet13.Visible = xlSheetVisible
+    
+    ' Set the destination worksheet
+    Set wsDestination = ThisWorkbook.Sheets("SPA") ' Change "DestinationSheet" to your actual destination sheet name
+    wsDestination.UsedRange.Clear
+    ' Loop through the baseValues collection and copy values and addresses to the destination sheet
+    For i = 1 To BaseValuesBackup.Count
+        valueAddressPair = Split(BaseValuesBackup.Item(i), "|") ' Assuming you stored value and address separated by "|"
+        wsDestination.Range("A" & i).Value = valueAddressPair(0) ' Value
+        wsDestination.Range("B" & i).Value = valueAddressPair(1) ' Address
+    Next i
+    Sheet13.Visible = xlSheetVeryHidden
+End Sub
+Public Sub Valuesrestoring()
+    Dim wsDestination As Worksheet
+    Dim valueAddressPair As Variant
+    Dim i As Integer
+   
+    ' Set the destination worksheet
+    Set wsDestination = ThisWorkbook.Sheets("SPA") ' Change "DestinationSheet" to your actual destination sheet name
+    ' Loop through the destination sheet and copy values and addresses to the baseValues collection
+    If n < 1 Then
+    MsgBox "Welcome to Demand Review " & Date, vbExclamation, Title:="© : E0565296"
+    
+    counter
+    For i = 1 To wsDestination.Cells(wsDestination.Rows.Count, "A").End(xlUp).Row
+        Dim cellValue As Variant
+        Dim cellAddress As Variant
+        ' Get value from column A
+        cellValue = wsDestination.Range("A" & i).Value
+        ' Get address from column B
+        cellAddress = wsDestination.Range("B" & i).Value
+        ' Add value and address to the baseValues collection
+        baseValues.Add cellValue, CStr(cellAddress)
+        BaseValuesBackup.Add cellValue & "|" & CStr(cellAddress), CStr(cellAddress)
+        'bigbasevalues.Add wsDestination.Range("B" & i).Value, wsDestination.Range("A" & i).Value
+    Next i
+    End If
+    
+End Sub
+'''''''
+''''''''''''''macro plus kbira''''''''''''''''''''''''''''''''''''''''''''''''''
+
+Sub ChangePivotTableDataSource()
+    Dim ws As Worksheet
+    Dim pt As PivotTable
+    Dim pc As PivotCache
+    Dim newRange As Range
+
+    ' Set the worksheet and PivotTable variables
+    Set ws = Worksheets("MAIN") ' Change to your sheet name
+    Set pt = ws.PivotTables("PivotTable4") ' Change to your PivotTable name
+
+    ' Set the new data range
+     ' Get the last row and column
+    Dim lastrow As Long, lastColumn As Variant
+    lastrow = _
+     Sheet2.Cells.Find("*", searchorder:=xlByRows, searchdirection:=xlPrevious).Row
+ 
+
+    Set newRange = Sheet2.Range("B16", "V" & lastrow)
+    
+
+    ' Set the PivotCache to the new data range
+    Set pc = ActiveWorkbook.PivotCaches.Create(SourceType:=xlDatabase, SourceData:=newRange)
+
+    ' Update the PivotTable with the new PivotCache
+   pt.ChangePivotCache pc
+   pt.RefreshTable
+End Sub
+''''''''''''''''''''''''new'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'''''macro addition qty''''''''''''''''
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub ApplyAddition()
+    Dim selectedRange As Range
+    Dim Addition As Double
+    Dim cell As Range
+    Dim distribute As Boolean
+    refresh = True
+    ' Check if a range is selected
+    On Error Resume Next
+    Set selectedRange = Selection
+    On Error GoTo 0
+    
+    If selectedRange Is Nothing Then
+        MsgBox "Please select a range before clicking the button.", vbExclamation
+        Exit Sub
+    End If
+    
+    ' Input quantity and checkbox
+    Addition = InputBox("Enter the Quantity to Add:")
+    If Addition = 0 Then
+        MsgBox "Please enter a valid number for the Addition Qty.", vbExclamation
+        Exit Sub
+    End If
+    
+    distribute = (MsgBox("Distribute the addition among all selected cells?", vbYesNo + vbQuestion) = vbYes)
+    
+    ' Apply addition to each cell in the selected range
+    If distribute Then
+        If selectedRange.Count > 0 Then
+            Addition = Addition / selectedRange.Count
+            For Each cell In selectedRange
+                cell.Value = cell.Value + Addition
+            Next cell
+        End If
+    Else
+        For Each cell In selectedRange
+            cell.Value = cell.Value + Addition
+        Next cell
+    End If
+    '''''''''''''''''''''''''''''
+    On Error Resume Next
+    pivot
+    refresh = False
+    
+End Sub
+'''''''''''''''''''''''''''''Sheet9 activation''''''''''''''''''''''
+Sub by_market()
+Sheet9.Activate
+Sheet9.Range("B3").Select
+End Sub
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub pivot()
+
+Application.EnableEvents = False
+On Error Resume Next
+Sheet2.PivotTables(1).RefreshTable
+Application.EnableEvents = True
+
+
+End Sub
